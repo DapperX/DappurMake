@@ -38,7 +38,7 @@ class make:
 		pass
 
 	def __setitem__(self,key,value):
-		print(key,value.var,value.dep,value.act)
+		print(key,value.tgt,value.dep,value.act)
 
 	def make(self):
 		pass
@@ -46,24 +46,34 @@ class make:
 
 class rule:
 	"""docstring for rule"""
-	def __init__(self,var):
-		self.var = var
+	def __init__(self,tgt):
+		self.tgt = tgt
 		self.dep = variable()
 		self.act = []
 
 	def depend(self,*args):
-		self.dep += variable(*args)
+		self.dep += args
 		return self
 
-	def do(self,*args):
-		for arg in args:
-			if isinstance(arg,variable):
-				arg = str(arg)
-			if isinstance(arg,str) or callable(arg):
-				self.act.append(arg)
-			else:
-				TypeError("%s is not a str or callable" % arg)
-		return self
+	def __getattr__(self,name):
+		def do(*args):
+			for arg in args:
+				if isinstance(arg,variable):
+					arg = str(arg)
+				if isinstance(arg,str) or callable(arg):
+					self.act.append(arg)
+				else:
+					TypeError("%s is not a str or callable" % arg)
+			return self
+
+		if name=="do":
+			global globalDependence
+			global globalTarget
+			globalDependence.text = self.dep.text
+			globalTarget.text = self.tgt.text
+			return do
+		else:
+			AttributeError("Attribute %s does not exist" % name)
 
 
 class variable:
@@ -90,17 +100,20 @@ class variable:
 			try:
 				arg_iter = iter(arg)
 			except TypeError as te:
-				raise TypeError("Error: Unrecognizable variable type")
+				raise TypeError("Error: Unrecognizable variable type %s" % str(type(arg)))
 			for subarg in arg_iter:
 				if isinstance(subarg,str):
 					self.text.append(subarg)
+				elif isinstance(subarg,variable):
+					self.text.extend(subarg.text)
 				else:
-					raise TypeError("Error: Unrecognizable variable type")
+					raise TypeError("Error: Unrecognizable variable type %s" % str(type(subarg)))
 
 
 	@decorator.ensure_instance('variable')
 	def __iadd__(self,x):
 		self.text.extend(x.text)
+		return self
 
 	@decorator.ensure_instance('variable')
 	def __add__(self,x):
@@ -117,6 +130,7 @@ class variable:
 	@decorator.ensure_instance('variable')
 	def __isub__(self,x):
 		self.text = self._sub_get_list(x)
+		return self
 
 	@decorator.ensure_instance('variable')
 	def __sub__(self,x):
@@ -129,6 +143,7 @@ class variable:
 	@decorator.ensure_instance
 	def __imul__(self,x):
 		self.text = self._mul_get_list(x)
+		return self
 
 	@decorator.ensure_instance('variable')
 	def __mul__(self,x):
@@ -182,11 +197,14 @@ class variable:
 
 
 	def do(self,*args,**kwargs):
-		return rule(var=self).do(*args,**kwargs)
+		return rule(tgt=self).do(*args,**kwargs)
 
 	def depend(self,*args,**kwargs):
-		return rule(var=self).depend(*args,**kwargs)
+		return rule(tgt=self).depend(*args,**kwargs)
 
+
+globalDependence = variable()
+globalTarget = variable()
 
 # import inspect
 # def retrieve_name(var):

@@ -3,6 +3,8 @@ import DappurMake as DPMK
 MAKE = DPMK.make()
 _ = DPMK.variable
 f = DPMK.function
+DEP = DPMK.globalDependence
+TGT = DPMK.globalTarget
 
 ASM = _("nasm")
 LD = _("ld")
@@ -30,6 +32,7 @@ MAKE[None] = bin_base.depend("lib")
 # MAKE[] = _(bin_base,"lib").do(DPMK.start("$@"))
 MAKE["mount"] = _().do("sudo tool/mount.sh")
 MAKE["umount"] = _().do("sudo tool/umount.sh")
+MAKE["test"] = _(DIR_MAIN).depend(DIR_BIN).do(DEP,TGT)
 
 
 MAKE.make()
