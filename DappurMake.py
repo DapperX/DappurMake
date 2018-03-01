@@ -1,4 +1,5 @@
 import os
+import inspect
 
 
 def warn(s):
@@ -32,9 +33,26 @@ class function:
 class make:
 	"""docstring for DPMK_make"""
 	def __init__(self):
-		pass
+		self.exp = {}
 
 	def export(self,*args):
+		caller_local = inspect.currentframe().f_back.f_locals.items()
+		for arg in args:
+			if not isinstance(arg,variable):
+				raise TypeError("`export` expects a variable type but %s is given" % str(type(arg)))
+			ans = None
+			for var_name,var_val in caller_local:
+				if arg is not var_val:
+					continue
+				if ans != None:
+					raise Exception("Detect duplicate variables %s and %s" % (name_old,name))
+				ans = (var_name,var_val)
+			if ans == None:
+				raise Exception("%s is not a explicit variable" % arg)
+			self.exp[ans[0]] = ans[1]
+
+
+	def unexport(self,*args):
 		pass
 
 	def __setitem__(self,key,value):
@@ -42,6 +60,14 @@ class make:
 
 	def make(self):
 		pass
+
+	def start(self,directory=".",filename="makefile.py"):
+		os.chdir(directory)
+		if not os.path.exists(filename):
+			raise FileNotFoundError("%s not found" % filename)
+		with open(filename) as file:
+			code = compile(file.read(),filename,"exec")
+			exec(code,self.exp)
 
 
 class rule:
@@ -60,7 +86,9 @@ class rule:
 			for arg in args:
 				if isinstance(arg,variable):
 					arg = str(arg)
-				if isinstance(arg,str) or callable(arg):
+				if isinstance(arg,str):
+					arg= command(arg)
+				if callable(arg):
 					self.act.append(arg)
 				else:
 					TypeError("%s is not a str or callable" % arg)
@@ -75,6 +103,18 @@ class rule:
 		else:
 			AttributeError("Attribute %s does not exist" % name)
 
+
+class command:
+	"""docstring for command"""
+	def __init__(self,cmd):
+		assert isinstance(cmd,str)
+		self.cmd = cmd
+		
+	def __call__(self):
+		pass
+
+	def __str__(self):
+		return self.cmd
 
 class variable:
 	"""docstring for DPMK_variable"""
@@ -205,17 +245,3 @@ class variable:
 
 globalDependence = variable()
 globalTarget = variable()
-
-# import inspect
-# def retrieve_name(var):
-# 	'''
-# 	utils:
-# 	get back the name of variables
-# 	'''
-# 	callers_local_vars = inspect.currentframe().f_back.f_locals.items()
-# 	return [var_name for var_name, var_val in callers_local_vars if var_val is var]
-
-
-# b = "abc"
-# a = b
-# print(retrieve_name(a))
