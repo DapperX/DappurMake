@@ -33,6 +33,7 @@ class function:
 class make:
 	"""docstring for DPMK_make"""
 	def __init__(self):
+		self.rule = []
 		self.exp = {}
 
 	def export(self,*args):
@@ -53,9 +54,25 @@ class make:
 
 
 	def unexport(self,*args):
-		pass
+		collect = []
+		for arg in args:
+			if not isinstance(arg,variable):
+				raise TypeError("`unexport` expects a variable type but %s is given" % str(type(arg)))
+			for name,val in self.exp.items():
+				if arg is val:
+					collect.append(name)
+		if len(collect) != len(args):
+			raise warn("Unexport an unexported variable")
+		for k in collect:
+			self.exp.pop(k)
+
 
 	def __setitem__(self,key,value):
+		if not (isinstance(key,str) or key == None):
+			raise TypeError("`str` or None is requested but %s is given" % str(type(key)))
+		if not isinstance(value,rule):
+			raise TypeError("`rule` is requested but %s is given" % str(type(value)))
+		self.rule.append((key,value))
 		print(key,value.tgt,value.dep,value.act)
 
 	def make(self):
@@ -111,7 +128,7 @@ class command:
 		self.cmd = cmd
 		
 	def __call__(self):
-		pass
+		os.system(self.cmd)
 
 	def __str__(self):
 		return self.cmd
