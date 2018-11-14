@@ -1,9 +1,10 @@
 import os
 import inspect
+import subprocess as subproc
 
 
 def warn(s):
-	print("Warning",s)
+	print("[Warning] ",s)
 
 
 class decorator:
@@ -17,17 +18,6 @@ class decorator:
 				return func(self,x,*args,**kwargs)
 			return inner
 		return wrapper
-
-
-class function:
-	"""docstring for function"""
-	@staticmethod
-	def pwd():
-		return variable(os.getcwd())
-
-	@staticmethod
-	def dir(path='.'):
-		return variable(os.listdir(path))
 
 
 class make:
@@ -91,53 +81,38 @@ class rule:
 	"""docstring for rule"""
 	def __init__(self,tgt):
 		self.tgt = tgt
-		self.dep = variable()
+		self.dep = []
 		self.act = []
+		self.cmd = []
 
-	def depend(self,*args):
-		self.dep += args
+	@decorator.ensure_instance('variable')
+	def depend(self,item):
+		self.dep.append(item)
 		return self
 
-	def __getattr__(self,name):
-		def do(*args):
-			for arg in args:
-				if isinstance(arg,variable):
-					arg = str(arg)
-				if isinstance(arg,str):
-					arg= command(arg)
-				if callable(arg):
-					self.act.append(arg)
-				else:
-					TypeError("%s is not a str or callable" % arg)
-			return self
+	def do(self,action,parser=str.format):
+		def do_parse(x):
+			if isinstance(k,str):
+				if parser is not None:
+					x = parser(x,self.tgt,*self.dep,_tgt_=self.tgt,_dep_=self.dep,_cmd_=self.cmd)
+			elif not callable(k):
+				TypeError("%s is not a str or callable" % k)
+			return x
 
-		if name=="do":
-			global globalDependence
-			global globalTarget
-			globalDependence.text = self.dep.text
-			globalTarget.text = self.tgt.text
-			return do
-		else:
-			AttributeError("Attribute %s does not exist" % name)
+		if isinstance(action,str) or callable(action):
+			action = [action]
+		if not isinstance(action,list):
+			raise TypeError("unknown type of action: %s" % type(action))
 
+		self.act.append([do_parse(k) for k in action])
+		return self
 
-class command:
-	"""docstring for command"""
-	def __init__(self,cmd):
-		assert isinstance(cmd,str)
-		self.cmd = cmd
-		
-	def __call__(self):
-		os.system(self.cmd)
-
-	def __str__(self):
-		return self.cmd
 
 class variable:
 	"""docstring for DPMK_variable"""
 
 	@classmethod
-	def _proto(cls,text:list) -> 'variable':
+	def _proto(cls,text:list) -> "variable":
 		assert isinstance(text,list)
 		proto = cls()
 		proto.text = text
@@ -165,6 +140,19 @@ class variable:
 					self.text.extend(subarg.text)
 				else:
 					raise TypeError("Error: Unrecognizable variable type %s" % str(type(subarg)))
+
+
+	def __getitem__(self,index):
+		return self._proto(self.text[index])
+
+
+	def __call__(self,check=True, stdin=None, stdout=None, stderr=None, timeout=None):
+		if stdout is None:
+			stdout = subproc.PIPE
+		if stderr is None:
+			stderr = subproc.PIPE
+		ret = subproc.run(self.text,shell=True,check=check,input=stdin,stdout=stdout,stderr=stderr,encoding="utf-8",timeout=timeout)
+		return (ret.returncode,ret.stdout,ret.stderr)
 
 
 	@decorator.ensure_instance('variable')
@@ -211,18 +199,24 @@ class variable:
 		return x.__mul__(self)
 
 
-	def __truediv__(self,x):
+	def _div_get_list(self,x) -> list:
 		def _div(val):
 			if val[-n:]==x:
 				return val[:-n]
-			warn("'%s' is not the prefix of '%s'" % (x,val))
+			warn("'%s' is not the suffix of '%s'" % (x,val))
 			return val
 
 		if not isinstance(x,str):
 			raise TypeError("Div operator requests 'str' type")
-
 		n = len(x)
-		return self._proto([_div(k) for k in self.text])
+		return [_div(k) for k in self.text]
+
+	def __truediv__(self,x):
+		return self._proto(self._div_get_list(x))
+
+	def __itruediv__(self,x):
+		self.text = self._div_get_list(x)
+		return self
 
 	def __rtruediv__(self,x):
 		def _rdiv(val):
@@ -233,13 +227,12 @@ class variable:
 
 		if not isinstance(x,str):
 			raise TypeError("Div operator requests 'str' type")
-
 		n = len(x)
 		return self._proto([_rdiv(k) for k in self.text])
 
 
-	def to_str(self,separator=' '):
-		return separator.join(self.text)
+	def to_str(self,separator=' ',prefix="", suffix=""):
+		return prefix+separator.join(self.text)+suffix
 
 	def __str__(self):
 		return self.to_str()
@@ -256,9 +249,5 @@ class variable:
 	def do(self,*args,**kwargs):
 		return rule(tgt=self).do(*args,**kwargs)
 
-	def depend(self,*args,**kwargs):
+	def depend(self,*args,**kwargs): 
 		return rule(tgt=self).depend(*args,**kwargs)
-
-
-globalDependence = variable()
-globalTarget = variable()

@@ -3,8 +3,6 @@ import DappurMake as DPMK
 MAKE = DPMK.make()
 _ = DPMK.variable
 f = DPMK.function
-DEP = DPMK.globalDependence
-TGT = DPMK.globalTarget
 
 ASM = _("nasm")
 LD = _("ld")
@@ -14,7 +12,7 @@ LDFLAG = _("-static")
 CFLAG = _(["-Wall","-Wextra","-Wconversion"],["-fno-builtin","-fno-stack-protector","-fno-asynchronous-unwind-tables"])
 MAKE.export(ASM,LD,CC,ASMFLAG,LDFLAG,CFLAG)
 
-DIR_MAIN = f.pwd()
+DIR_MAIN = _(_("pwd")()[1])
 DIR_BIN = DIR_MAIN*"/bin"
 DIR_LIB = DIR_MAIN*"/lib"
 DIR_INCLUDE = (DIR_MAIN + DIR_LIB)*"/include"
@@ -28,11 +26,11 @@ MOD = "./"/f.dir() - MOD_EXCLUDE
 
 
 bin_base = _(BIN_EXT,MOD,"test")
-MAKE[None] = bin_base.depend("lib")
+MAKE.register(bin_base.depend("lib"))
 # MAKE[] = _(bin_base,"lib").do(DPMK.start(TAG))
-MAKE["mount"] = _().do("sudo tool/mount.sh")
-MAKE["umount"] = _().do("sudo tool/umount.sh")
-MAKE["test"] = _(DIR_MAIN).depend(DIR_BIN).do(DEP,TGT)
+MAKE.register("mount", _().do("sudo tool/mount.sh"))
+MAKE.register("umount", _().do("sudo tool/umount.sh"))
+MAKE.register("test", _(DIR_MAIN).depend(DIR_BIN).do(DEP,TGT))
 
 
-MAKE.make()
+# MAKE.make()
