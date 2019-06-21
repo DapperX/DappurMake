@@ -1,6 +1,7 @@
 import os
 import inspect
 import subprocess as subproc
+import DappurMake.lib as lib
 
 
 def warn(s):
@@ -119,14 +120,16 @@ class variable:
 		return proto
 
 
-	def __init__(self,*args):
+	def __init__(self, *args):
 		self.text = []
 
 		for arg in args:
-			if isinstance(arg,str):
+			if isinstance(arg, bytes):
+				arg = arg.decode()
+			if isinstance(arg, str):
 				self.text.append(arg)
 				continue
-			if isinstance(arg,variable):
+			if isinstance(arg, variable):
 				self.text.extend(arg.text)
 				continue
 			try:
@@ -136,7 +139,7 @@ class variable:
 			for subarg in arg_iter:
 				if isinstance(subarg,str):
 					self.text.append(subarg)
-				elif isinstance(subarg,variable):
+				elif isinstance(subarg, variable):
 					self.text.extend(subarg.text)
 				else:
 					raise TypeError("Error: Unrecognizable variable type %s" % str(type(subarg)))
@@ -146,13 +149,14 @@ class variable:
 		return self._proto(self.text[index])
 
 
-	def __call__(self,check=True, stdin=None, stdout=None, stderr=None, timeout=None):
+	def __call__(self, shell=True, stdout=None, stderr=None, timeout=None):
 		if stdout is None:
 			stdout = subproc.PIPE
 		if stderr is None:
 			stderr = subproc.PIPE
-		ret = subproc.run(self.text,shell=True,check=check,input=stdin,stdout=stdout,stderr=stderr,encoding="utf-8",timeout=timeout)
-		return (ret.returncode,ret.stdout,ret.stderr)
+		child = subproc.Popen(self.text, shell=shell, stdout=stdout, stderr=stderr)
+		child.wait(timeout)
+		return (child.returncode, child.stdout.read(), child.stderr.read())
 
 
 	@decorator.ensure_instance('variable')
