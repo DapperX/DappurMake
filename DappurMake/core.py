@@ -1,7 +1,6 @@
 import os
 import inspect
 import subprocess as subproc
-import DappurMake.lib as lib
 
 
 def warn(s):
