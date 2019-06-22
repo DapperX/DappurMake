@@ -42,14 +42,19 @@ class variable:
 		return self._proto(self.text[index])
 
 
-	def __call__(self, shell=True, stdout=None, stderr=None, timeout=None):
+	def __call__(self, shell=True, stdout=None, stderr=None, strip=True, timeout=None):
 		if stdout is None:
 			stdout = subproc.PIPE
 		if stderr is None:
 			stderr = subproc.PIPE
 		child = subproc.Popen(self.text, shell=shell, stdout=stdout, stderr=stderr)
 		child.wait(timeout)
-		return (child.returncode, child.stdout.read(), child.stderr.read())
+		stdout = child.stdout.read()
+		stderr = child.stderr.read()
+		if strip:
+			stdout = stdout.strip()
+			stderr = stderr.strip()
+		return (child.returncode, stdout, stderr)
 
 
 	@helper.decorator.ensure_instance("variable.variable")

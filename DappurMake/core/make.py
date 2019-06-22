@@ -58,5 +58,8 @@ class make:
 			code = compile(file.read(),filename,"exec")
 			exec(code,self.exp)
 
-	def register(self, name, rule=None):
-		print("#register", name, rule)
+	def register(self, name=None, rule=None):
+		if rule is None:
+			name, rule = "None", name
+		print("#register", name)
+		print(rule)

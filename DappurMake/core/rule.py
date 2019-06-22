@@ -12,10 +12,10 @@ class rule:
 
 	def __str__(self):
 		res = ""
-		res = "[target]" + str(self.tgt) + '\n'
-		res = "[depend]" + str(self.dep) + '\n'
-		res = "[action]" + str(self.act) + '\n'
-		res = "[command]" + str(self.cmd) + '\n'
+		res += "[target]" + str(self.tgt) + '\n'
+		res += "[depend]" + str(self.dep) + '\n'
+		res += "[action]" + str(self.act) + '\n'
+		res += "[command]" + str(self.cmd) + '\n'
 		return res
 
 
