@@ -1,8 +1,8 @@
 import DappurMake as DPMK
 
-MAKE = DPMK.make()
-_ = DPMK.variable
-f = DPMK.lib.function
+MAKE = DPMK.core.make()
+_ = DPMK.core.variable
+f = DPMK.library.function
 
 ASM = _("nasm")
 LD = _("ld")
@@ -22,7 +22,7 @@ PATH_LIB = (~DIR_LIB + "/lib")*LIB*".a"
 
 BIN_EXT = _("init")
 MOD_EXCLUDE = _(BIN_EXT,"bin","include","lib","tool","test")
-MOD = "./"/f.dir() - MOD_EXCLUDE
+MOD = f.dir() - MOD_EXCLUDE
 
 
 bin_base = _(BIN_EXT,MOD,"test")
