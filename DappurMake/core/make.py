@@ -1,65 +1,121 @@
 import os
 import inspect
-from .variable import *
+from .. import core
+from . import helper
 
 class make:
 	"""docstring for DPMK_make"""
 	def __init__(self):
-		self.rule = []
-		self.exp = {}
+		self.rule = {}
+		self.rule_named = {}
+		self.env = {}
 
 	def export(self, *args):
 		caller_local = inspect.currentframe().f_back.f_locals.items()
+		caller_global = inspect.currentframe().f_back.f_globals.items()
 		for arg in args:
-			if not isinstance(arg, variable):
-				raise TypeError("`export` expects a variable type but %s is given" % str(type(arg)))
+			if not isinstance(arg, core.variable):
+				raise TypeError("`export` expects a `variable` type but %s is given" % str(type(arg)))
 			ans = None
-			for var_name,var_val in caller_local:
-				if arg is not var_val:
+			for name,val in caller_local:
+				if arg is not val:
 					continue
 				if ans != None:
-					raise Exception("Detect duplicate variables %s and %s" % (name_old,name))
-				ans = (var_name,var_val)
-			if ans == None:
+					raise Exception("Detect duplicate variables %s and %s" % (name_old, name))
+				ans = (name, val)
+			if ans is None:
+				for name,val in caller_global:
+					if arg is not val:
+						continue
+					if ans != None:
+						raise Exception("Detect duplicate variables %s and %s" % (name_old, name))
+					ans = (name, val)
+			if ans is None:
 				raise Exception("%s is not a explicit variable" % arg)
-			self.exp[ans[0]] = ans[1]
+			self.env[ans[0]] = ans[1]
 
 
 	def unexport(self, *args):
 		collect = []
 		for arg in args:
-			if not isinstance(arg, variable):
-				raise TypeError("`unexport` expects a variable type but %s is given" % str(type(arg)))
-			for name,val in self.exp.items():
+			if not isinstance(arg, core.variable):
+				raise TypeError("`unexport` expects a `variable` type but %s is given" % str(type(arg)))
+
+			is_found = False
+			for name,val in self.env.items():
 				if arg is val:
 					collect.append(name)
-		if len(collect) != len(args):
-			raise warn("Unexport an unexported variable")
+					is_found = True
+			if not is_found:
+				warn("%s is not exported before" % arg)
+
 		for k in collect:
-			self.exp.pop(k)
+			self.env.pop(k)
 
 
 	def __setitem__(self, key, value):
-		if not (isinstance(key,str) or key == None):
-			raise TypeError("`str` or None is requested but %s is given" % str(type(key)))
-		if not isinstance(value,rule):
-			raise TypeError("`rule` is requested but %s is given" % str(type(value)))
-		self.rule.append((key,value))
-		print(key,value.tgt,value.dep,value.act)
+		self.register(key, value)
 
-	def make(self):
-		pass
 
-	def start(self, directory=".", filename="makefile.py"):
+	def call(self, directory=".", filename="makefile.py"):
 		os.chdir(directory)
 		if not os.path.exists(filename):
 			raise FileNotFoundError("%s not found" % filename)
 		with open(filename) as file:
 			code = compile(file.read(),filename,"exec")
-			exec(code,self.exp)
+			exec(code, self.env)
+
+
+	def start(self, root=None):
+		self._find_root()
+		# execute the command in sequence
+
 
 	def register(self, name=None, rule=None):
 		if rule is None:
-			name, rule = "None", name
+			name, rule = None, name
+
+		if not (isinstance(name, str) or name==None):
+			raise TypeError("`str` or None is requested but %s is given" % str(type(name)))
+		if not isinstance(rule, core.rule):
+			raise TypeError("`rule` is requested but %s is given" % str(type(rule)))
+
 		print("#register", name)
 		print(rule)
+
+		rule_id = id(rule)
+		if rule_id in self.rule:
+			raise KeyError("An identical rule should not be registered more than once")
+		self.rule[rule_id] = (name, rule)
+
+		if name is not None:
+			if name in self.rule_named:
+				raise KeyError("The name %s has been used for another rule" % name)
+			self.rule_named[name] = rule
+
+		return rule
+
+
+	def _find_root(self):
+		ufset = []
+		rank = {}
+
+		def _get_id(var):
+			index = rank.setdefault(id(var), len(rank))
+			assert(index<=len(ufset))
+			if index==len(ufset):
+				ufset.append(index)
+			return index
+
+		for k,v in self.rule.items():
+			rule = v[1]
+			f_tgt = helper.ufset_find(ufset, _get_id(rule.tgt))
+			for dep in rule.dep:
+				f_dep = helper.ufset_find(ufset, _get_id(dep))
+				ufset[f_dep] = f_tgt
+
+		cnt_root = 0
+		for i in range(len(ufset)):
+			cnt_root += i==ufset[i]
+
+		print("#root:", cnt_root)

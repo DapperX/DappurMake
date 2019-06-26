@@ -1,4 +1,4 @@
-from . import core
+from .. import core
 import os
 
 def dir(pwd=None):

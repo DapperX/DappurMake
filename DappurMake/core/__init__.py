@@ -1,5 +1,7 @@
-from .make import *
-from .variable import *
-from .rule import *
+from .variable import variable
+from .make import make
+from .rule import rule
 
-__all__ = ["make", "variable", "rule"]
+__all__ = ["variable", "make", "rule"]
+
+print(dir())

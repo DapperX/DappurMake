@@ -33,4 +33,4 @@ MAKE.register("umount", _().do("sudo tool/umount.sh"))
 MAKE.register("test", _(DIR_MAIN).depend(DIR_BIN).do("null"))
 
 
-# MAKE.make()
+MAKE.start()

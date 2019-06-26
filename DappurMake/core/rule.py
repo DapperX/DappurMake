@@ -1,5 +1,5 @@
+from .. import core
 from . import helper
-from .variable import *
 
 class rule:
 	"""docstring for rule"""
@@ -19,7 +19,7 @@ class rule:
 		return res
 
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def depend(self,item):
 		self.dep.append(item)
 		return self

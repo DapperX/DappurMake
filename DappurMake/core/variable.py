@@ -1,6 +1,6 @@
 import subprocess as subproc
+from .. import core
 from . import helper
-from .rule import *
 
 class variable:
 	"""docstring for DPMK_variable"""
@@ -49,24 +49,24 @@ class variable:
 			stderr = subproc.PIPE
 		child = subproc.Popen(self.text, shell=shell, stdout=stdout, stderr=stderr)
 		child.wait(timeout)
-		stdout = child.stdout.read()
-		stderr = child.stderr.read()
+		stdout = child.stdout.read() if child.stdout is not None else b''
+		stderr = child.stderr.read() if child.stderr is not None else b''
 		if strip:
 			stdout = stdout.strip()
 			stderr = stderr.strip()
 		return (child.returncode, stdout, stderr)
 
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __iadd__(self, x):
 		self.text.extend(x.text)
 		return self
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __add__(self, x):
 		return self._proto(self.text + x.text)
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __radd__(self, x):
 		return x.__add__(self)
 
@@ -74,12 +74,12 @@ class variable:
 	def _sub_get_list(self, x) -> list:
 		return list(filter(lambda val:val not in x.text,self.text))
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __isub__(self, x):
 		self.text = self._sub_get_list(x)
 		return self
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __sub__(self, x):
 		return self._proto(self._sub_get_list(x))
 
@@ -87,16 +87,16 @@ class variable:
 	def _mul_get_list(x,y) -> list:
 		return [k+t for t in y.text for k in x.text]
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __imul__(self, x):
 		self.text = self._mul_get_list(x)
 		return self
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __mul__(self, x):
 		return self._proto(self._mul_get_list(x))
 
-	@helper.decorator.ensure_instance("variable.variable")
+	@helper.decorator.ensure_instance("core.variable")
 	def __rmul__(self, x):
 		return x.__mul__(self)
 
@@ -133,7 +133,7 @@ class variable:
 		return self._proto([_rdiv(k) for k in self.text])
 
 
-	def to_str(self,separator=' ',prefix="", suffix=""):
+	def to_str(self,separator=' ', prefix="", suffix=""):
 		return prefix+separator.join(self.text)+suffix
 
 	def __str__(self):
@@ -149,7 +149,7 @@ class variable:
 
 
 	def do(self,*args,**kwargs):
-		return rule(tgt=self).do(*args,**kwargs)
+		return core.rule(tgt=self).do(*args, **kwargs)
 
 	def depend(self,*args,**kwargs): 
-		return rule(tgt=self).depend(*args,**kwargs)
+		return core.rule(tgt=self).depend(*args, **kwargs)
