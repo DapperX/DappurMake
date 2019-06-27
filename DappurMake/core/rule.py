@@ -1,5 +1,7 @@
 from .. import core
 from . import helper
+import subprocess as subproc
+from collections import Iterable
 
 class rule:
 	"""docstring for rule"""
@@ -7,7 +9,6 @@ class rule:
 		self.tgt = tgt
 		self.dep = []
 		self.act = []
-		self.cmd = []
 
 
 	def __str__(self):
@@ -15,7 +16,6 @@ class rule:
 		res += "[target]" + str(self.tgt) + '\n'
 		res += "[depend]" + str(self.dep) + '\n'
 		res += "[action]" + str(self.act) + '\n'
-		res += "[command]" + str(self.cmd) + '\n'
 		return res
 
 
@@ -25,19 +25,24 @@ class rule:
 		return self
 
 
-	def do(self, action, parser=str.format):
-		def do_parse(k):
+	def do(self, action, silence=False, parser=str.format):
+		# generate the executable function by pasring the str or decorate the callable object
+		def gen_executable(k):
 			if isinstance(k, str):
 				if parser is not None:
-					x = parser(k, self.tgt, *self.dep, _tgt_=self.tgt, _dep_=self.dep, _cmd_=self.cmd)
-			elif not callable(k):
+					cmd = parser(k, self.tgt, *self.dep, _tgt=self.tgt, _dep=self.dep)
+					x = lambda : subproc.run(cmd, shell=True)
+			elif callable(k):
+				x = helper.wrapper(k, self.tgt, *self.dep, _tgt=self.tgt, _dep=self.dep)
+			else:
 				TypeError("%s is not a str or callable" % k)
 			return x
 
-		if isinstance(action,str) or callable(action):
+		# if the parameter is a single action, we then wrapper it as an action list
+		if isinstance(action, str) or callable(action):
 			action = [action]
-		if not isinstance(action,list):
-			raise TypeError("unknown type of action: %s" % type(action))
+		if not isinstance(action, Iterable):
+			raise TypeError("Unknown type of actions: %s" % type(action))
 
-		self.act.append([do_parse(k) for k in action])
+		self.act.extend([gen_executable(k) for k in action])
 		return self

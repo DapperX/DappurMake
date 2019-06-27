@@ -18,5 +18,15 @@ class decorator:
 		return wrapper
 
 
+def wrapper(func, *args, **kwargs):
+	def inner():
+		return func(*args, **kwargs)
+	return inner
+
+
 def ufset_find(f, u):
 	return u if f[u]==u else ufset_find(f[u])
+
+
+def nothing(*args, **kwargs):
+	pass

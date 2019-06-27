@@ -8,6 +8,7 @@ class make:
 	def __init__(self):
 		self.rule = {}
 		self.rule_named = {}
+		self.rule_tgt = {}
 		self.env = {}
 
 	def export(self, *args):
@@ -15,7 +16,7 @@ class make:
 		caller_global = inspect.currentframe().f_back.f_globals.items()
 		for arg in args:
 			if not isinstance(arg, core.variable):
-				raise TypeError("`export` expects a `variable` type but %s is given" % str(type(arg)))
+				raise TypeError("`export` expects a `variable` type but %s is given" % type(arg))
 			ans = None
 			for name,val in caller_local:
 				if arg is not val:
@@ -39,7 +40,7 @@ class make:
 		collect = []
 		for arg in args:
 			if not isinstance(arg, core.variable):
-				raise TypeError("`unexport` expects a `variable` type but %s is given" % str(type(arg)))
+				raise TypeError("`unexport` expects a `variable` type but %s is given" % type(arg))
 
 			is_found = False
 			for name,val in self.env.items():
@@ -75,9 +76,18 @@ class make:
 			if id(root) not in self.rule:
 				raise ValueError("`root` is not registered")
 		else:
-			raise TypeError("Unrecognized `root` type %s" % str(type(root)))
+			raise TypeError("Unrecognized `root` type %s" % type(root))
 
-		# execute the command in sequence
+		def _start(root):
+			for dep in root.dep:
+				child = self.rule_tgt.get(id(dep))
+				if child is not None:
+					_start(child)
+			print("#begin actions", root.act)
+			for act in root.act:
+				act()
+
+		_start(root)
 
 
 	def register(self, name=None, rule=None):
@@ -85,9 +95,9 @@ class make:
 			name, rule = None, name
 
 		if not (isinstance(name, str) or name==None):
-			raise TypeError("`str` or None is requested but %s is given" % str(type(name)))
+			raise TypeError("`str` or None is requested but %s is given" % type(name))
 		if not isinstance(rule, core.rule):
-			raise TypeError("`rule` is requested but %s is given" % str(type(rule)))
+			raise TypeError("`rule` is requested but %s is given" % type(rule))
 
 		print("#register", name)
 		print(rule)
@@ -96,6 +106,8 @@ class make:
 		if rule_id in self.rule:
 			raise KeyError("An identical rule should not be registered more than once")
 		self.rule[rule_id] = (name, rule)
+
+		self.rule_tgt[id(rule.tgt)] = rule
 
 		if name is not None:
 			if name in self.rule_named:
@@ -106,16 +118,9 @@ class make:
 
 
 	def _find_root(self):
-		ufset = []
-		rank = {}
+		ufset = {}
 
-		def _get_id(var):
-			index = rank.setdefault(id(var), len(rank))
-			assert(index<=len(ufset))
-			if index==len(ufset):
-				ufset.append(index)
-			return index
-
+		_get_id = lambda var: rank.setdefault(id(var), id(var))
 		for k,v in self.rule.items():
 			rule = v[1]
 			f_tgt = helper.ufset_find(ufset, _get_id(rule.tgt))
@@ -123,16 +128,10 @@ class make:
 				f_dep = helper.ufset_find(ufset, _get_id(dep))
 				ufset[f_dep] = f_tgt
 
-		root = -1
-		for i in range(len(ufset)):
-			if i!=ufset[i]:
-				continue
-			if root!=-1:
-				raise ValueError("More than one root exists, failed to infer")
-			root = i
-
-		for k,v in self.rule.items():
-			if id(v[1].tgt)==root:
-				return v[1]
-
-		raise Exception("Unknown error occurs")
+		root = []
+		for k,v in ufset.items():
+			if k==v:
+				root.append(k)
+		if len(root)>1:
+			raise ValueError("%d roots exists, failed to infer" % len(root))
+		return self.rule_tgt[root.keys().next()]

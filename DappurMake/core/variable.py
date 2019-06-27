@@ -133,7 +133,7 @@ class variable:
 		return self._proto([_rdiv(k) for k in self.text])
 
 
-	def to_str(self,separator=' ', prefix="", suffix=""):
+	def to_str(self, separator=' ', prefix="", suffix=""):
 		return prefix+separator.join(self.text)+suffix
 
 	def __str__(self):
