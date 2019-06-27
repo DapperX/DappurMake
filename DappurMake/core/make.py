@@ -67,7 +67,16 @@ class make:
 
 
 	def start(self, root=None):
-		self._find_root()
+		if root is None:
+			root = self._find_root()
+		elif isinstance(root, str):
+			root = self.rule_named[root]
+		elif isinstance(root, core.rule):
+			if id(root) not in self.rule:
+				raise ValueError("`root` is not registered")
+		else:
+			raise TypeError("Unrecognized `root` type %s" % str(type(root)))
+
 		# execute the command in sequence
 
 
@@ -114,8 +123,16 @@ class make:
 				f_dep = helper.ufset_find(ufset, _get_id(dep))
 				ufset[f_dep] = f_tgt
 
-		cnt_root = 0
+		root = -1
 		for i in range(len(ufset)):
-			cnt_root += i==ufset[i]
+			if i!=ufset[i]:
+				continue
+			if root!=-1:
+				raise ValueError("More than one root exists, failed to infer")
+			root = i
 
-		print("#root:", cnt_root)
+		for k,v in self.rule.items():
+			if id(v[1].tgt)==root:
+				return v[1]
+
+		raise Exception("Unknown error occurs")
