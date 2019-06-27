@@ -83,9 +83,7 @@ class make:
 				child = self.rule_tgt.get(id(dep))
 				if child is not None:
 					_start(child)
-			print("#begin actions", root.act)
-			for act in root.act:
-				act()
+			root.update(False)
 
 		_start(root)
 

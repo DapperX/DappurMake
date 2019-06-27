@@ -57,6 +57,10 @@ class variable:
 		return (child.returncode, stdout, stderr)
 
 
+	def __len__(self):
+		return len(self.text)
+
+
 	@helper.decorator.ensure_instance("core.variable")
 	def __iadd__(self, x):
 		self.text.extend(x.text)
