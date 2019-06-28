@@ -58,13 +58,14 @@ class make:
 		self.register(key, value)
 
 
-	def call(self, directory=".", filename="makefile.py"):
+	def call(self, directory=".", filename="makefile.py", **export):
 		os.chdir(directory)
 		if not os.path.exists(filename):
 			raise FileNotFoundError("%s not found" % filename)
 		with open(filename) as file:
-			code = compile(file.read(),filename,"exec")
-			exec(code, self.env)
+			code = compile(file.read(), filename,"exec")
+			env_copy = self.env.copy()
+			exec(code, env_copy(export))
 
 
 	def start(self, root=None):
@@ -118,7 +119,7 @@ class make:
 	def _find_root(self):
 		ufset = {}
 
-		_get_id = lambda var: rank.setdefault(id(var), id(var))
+		_get_id = lambda var: ufset.setdefault(id(var), id(var))
 		for k,v in self.rule.items():
 			rule = v[1]
 			f_tgt = helper.ufset_find(ufset, _get_id(rule.tgt))
@@ -132,4 +133,4 @@ class make:
 				root.append(k)
 		if len(root)>1:
 			raise ValueError("%d roots exists, failed to infer" % len(root))
-		return self.rule_tgt[root.keys().next()]
+		return self.rule_tgt[next(iter(root))]
