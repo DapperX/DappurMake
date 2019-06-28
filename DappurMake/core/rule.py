@@ -49,7 +49,7 @@ class rule:
 		return self
 
 
-	def need_update(self):
+	def need_update(self, handle_uncondi=True):
 		# Considering four cases that require updates:
 		# 1. U.depend(V)	mtime(U)<mtime(V)
 		# 2. ().depend(V)	always True (deem mtime(U) as -inf)
@@ -62,7 +62,7 @@ class rule:
 			mtime_tgt = os.path.getmtime(stgt) if os.path.exists(stgt) else -inf
 			if mtime_tgt<mtime_tgt_min:
 				mtime_tgt_min = mtime_tgt
-		if len(self.tgt)==0:
+		if handle_uncondi and len(self.tgt)==0:
 			mtime_tgt_min = -inf
 
 		mtime_dep_max = -inf
@@ -75,7 +75,7 @@ class rule:
 				mtime_dep = os.path.getmtime(sdep)
 				if mtime_dep>mtime_dep_max:
 					mtime_dep_max = mtime_dep
-		if cnt_sdep==0:
+		if handle_uncondi and cnt_sdep==0:
 			mtime_dep_max = inf
 
 		# Whether the oldest target has been outdated than the newest dependency
@@ -91,5 +91,5 @@ class rule:
 			if not act():
 				raise RuntimeError("Error occurs. Failed")
 
-		if self.need_update():
+		if self.need_update(False):
 			raise RuntimeError("Target '%s' is not updated. Failed." % self.tgt)
